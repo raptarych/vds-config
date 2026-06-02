@@ -46,7 +46,7 @@ fi
 CONTAINER_NAME="mtproto-proxy"
 PORT="484"
 FAKE_DOMAIN="gosuslugi.ru"  # Фиксированный домен для Fake TLS
-if [ -f "~/mtproto_config.txt" ]; then
+if [ -f ~/mtproto_config.txt ]; then
     echo -e "${YELLOW}Telegram Proxy установлен, пропускаем его установку${NC}"
 	source ~/mtproto_config.txt
 else
@@ -139,5 +139,5 @@ echo "🔗 Ссылка для Telegram (IPv4):"
 echo -e "${GREEN}${LINK}${NC}"
 echo ""
 echo "🔗 Адрес панели wg-easy:"
-echo -e "${GREEN}https:/${EXTERNAL_IP}:51821/${NC}"
+echo -e "${GREEN}https://${EXTERNAL_IP}:51821/${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
