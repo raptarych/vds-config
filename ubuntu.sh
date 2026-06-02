@@ -8,11 +8,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-if [[ -z "$EXTERNAL_IP" || -z "$WG_PANEL_PASSWORD" ]]; then
-    echo -e "${RED}Для работы скрипта пожалуйста задайте bash-переменные EXTERNAL_IP и WG_PANEL_PASSWORD"
-	exit 1
-fi
-
 # Docker
 if ! command -v docker &> /dev/null; then
 	curl -fsSL https://get.docker.com -o get-docker.sh
@@ -25,6 +20,10 @@ fi
 if sudo docker ps -f "status=running" | grep -q "wg-easy"; then
     echo -e "${YELLOW}wg-easy установлен, пропускаем его установку${NC}"
 else
+	if [[ -z "$EXTERNAL_IP" || -z "$WG_PANEL_PASSWORD" ]]; then
+		echo -e "${RED}Для работы скрипта пожалуйста задайте bash-переменные EXTERNAL_IP и WG_PANEL_PASSWORD"
+		exit 1
+	fi
 	docker run -d \
 		--name=wg-easy \
 		-e WG_HOST=$EXTERNAL_IP \
@@ -50,6 +49,11 @@ if [ -f ~/mtproto_config.txt ]; then
     echo -e "${YELLOW}Telegram Proxy установлен, пропускаем его установку${NC}"
 	source ~/mtproto_config.txt
 else
+	
+	if [[ -z "$EXTERNAL_IP" ]]; then
+		echo -e "${RED}Для работы скрипта пожалуйста задайте bash-переменную EXTERNAL_IP"
+		exit 1
+	fi
 	echo "🚀 Запуск MTProto прокси с Fake TLS"
 	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	echo -e "📌 Используем домен: ${BLUE}${FAKE_DOMAIN}${NC}"
