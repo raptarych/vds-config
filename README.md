@@ -5,8 +5,8 @@
 ## Ubuntu 24.04
 
 ```
-EXTERNAL_IP=666.666.666.666
-WG_PANEL_PASSWORD=please_replace_it
-curl -fsSL https://raw.githubusercontent.com/raptarych/vds-config/main/ubuntu.sh -o ubuntu.sh
-sudo sh ubuntu.sh
+curl -fsSL https://raw.githubusercontent.com/raptarych/vds-config/main/ubuntu.sh -H "Pragma: no-cache" | \
+	EXTERNAL_IP=⚠️Your IP \
+	WG_PANEL_PASSWORD=⚠️Your password \
+	bash
 ```
