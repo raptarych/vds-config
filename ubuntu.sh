@@ -11,6 +11,7 @@ NC='\033[0m'
 if [[ -z "$EXTERNAL_IP" || -z "$WG_PANEL_PASSWORD" ]]; then
     echo -e "${RED}Для работы скрипта пожалуйста задайте bash-переменные EXTERNAL_IP и WG_PANEL_PASSWORD"
 	exit 1
+fi
 
 # Docker
 if ! command -v docker &> /dev/null; then
@@ -74,6 +75,7 @@ else
 	if ss -tuln | grep -q ":${PORT} "; then
 		echo -e "${RED}Порт занят: ${NC}"
 		exit 1
+	fi
 
 	# Останавливаем старый контейнер, если есть
 	echo -n "🛑 Остановка старого контейнера... "
