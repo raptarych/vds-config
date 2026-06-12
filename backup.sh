@@ -30,6 +30,7 @@ backup_vds() {
   local tarfile="${backup_tmpdir}/vds-backup-${randname}.tar"
 
   tar cf "${tarfile}" -C "${HOME}" .vds
+  chmod 644 "${tarfile}"
   info "Backup created: ${tarfile}"
 
   docker rm -f "${SERV_CONTAINER}" >/dev/null 2>&1 || true
