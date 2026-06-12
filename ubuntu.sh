@@ -73,6 +73,7 @@ if [[ -z "$TG_PROXY_SECRET" ]]; then
 	echo "   Длина: ${#TG_PROXY_SECRET} символов"
 fi
 LINK="tg://proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=${TG_PROXY_SECRET}"
+LINK_HTTP="https://t.me/proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=${TG_PROXY_SECRET}"
 
 # Создаём .env
 cat > .env << EOF
@@ -100,34 +101,15 @@ sleep 3
 if sudo docker compose ps --format json | grep -q "wg-easy" && sudo docker compose ps --format json | grep -q "mtproto-proxy"; then
 
 	echo -e "${GREEN}✅ УСПЕШНО${NC}"
-	echo ""
-	echo "📊 ИНФОРМАЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ:"
-	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	echo "🌐 Сервер: ${EXTERNAL_IP}"
-	echo "🔌 Порт: ${PORT}"
-	echo "🔑 Секрет: ${TG_PROXY_SECRET}"
-	echo "🌐 Fake TLS домен: ${FAKE_DOMAIN}"
-	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	echo "🔗 Ссылка для Telegram (IPv4):"
-	echo -e "${GREEN}${LINK}${NC}"
-	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-	cat > ~/.vds/mtproto_config.txt << EOF
-EXTERNAL_IP="${EXTERNAL_IP}"
-PORT="${PORT}"
-TG_PROXY_SECRET="${TG_PROXY_SECRET}"
-FAKE_DOMAIN="${FAKE_DOMAIN}"
-LINK="${LINK}"
-EOF
-	echo "✅ Конфигурация сохранена в ~/.vds/mtproto_config.txt"
-
+	echo "✅ Конфигурация сохранена в .env"
 	echo ""
 	echo "📋 Логи контейнеров:"
 	sudo docker compose logs --tail 5
 
 else
 	echo -e "${RED}❌ ОШИБКА${NC}"
-	sudo docker compose logs
+	sudo docker compose logs --tail 5
+	exit 1
 fi
 
 
@@ -136,6 +118,7 @@ echo "✅ Скрипт завершил свою работу!"
 echo ""
 echo "🔗 Ссылка для Telegram (IPv4):"
 echo -e "${GREEN}${LINK}${NC}"
+echo -e "${GREEN}${LINK_HTTP}${NC}"
 echo ""
 echo "🔗 Адрес панели wg-easy:"
 echo -e "${GREEN}http://${EXTERNAL_IP}:51821/${NC}"
