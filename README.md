@@ -21,7 +21,7 @@ bash ubuntu.sh
 1. Определяет внешний IP сервера
 2. Спрашивает пароль для панели WireGuard
 3. Ставит Docker и Docker Compose (если нет)
-4. Генерирует секрет для MTProto Proxy с Fake TLS (домен `gosuslugi.ru`)
+4. Генерирует секрет для MTProto Proxy с Fake TLS
 5. Поднимает контейнеры
 6. Выдаёт ссылки для подключения
 
@@ -35,19 +35,3 @@ bash ubuntu.sh
 ## Данные
 
 Все конфиги хранятся в `~/.vds/`:
-
-- `~/.vds/wg-easy/` — конфиги WireGuard
-- `~/.vds/proxy-config/` — конфиги прокси
-- `.env` — переменные (IP, пароль, секрет)
-
-## Перезапуск
-
-```bash
-sudo docker compose --env-file .env up -d
-```
-
-## Остановка
-
-```bash
-sudo docker compose --env-file .env down --remove-orphans
-```
