@@ -5,48 +5,14 @@
 
 set -euo pipefail
 
-# Colors
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib.sh"
 
 # Constants
 readonly FAKE_DOMAIN='gosuslugi.ru'
 PORT='484'
 readonly WG_PANEL_PORT='51821'
 readonly CONFIG_DIR='~/.vds'
-
-
-#######################################
-# Print error message to stderr and exit.
-# Arguments:
-#   Error message string.
-#######################################
-err() {
-  printf "%s\n" "$*" >&2
-}
-
-
-#######################################
-# Print info message to stdout.
-# Arguments:
-#   Message string.
-#######################################
-info() {
-  printf "${GREEN}%s${NC}\n" "$*"
-}
-
-
-#######################################
-# Print warning message to stdout.
-# Arguments:
-#   Message string.
-#######################################
-warn() {
-  printf "${YELLOW}%s${NC}\n" "$*"
-}
 
 
 #######################################
@@ -241,7 +207,7 @@ print_summary() {
 main() {
   local external_ip
   external_ip="$(get_external_ip)"
-  printf "Detected external IP of VPS: ${GREEN}%s${NC}\n" "${external_ip}"
+  print_info "Detected external IP of VPS" "${external_ip}"
 
   local wg_panel_password
   printf "Enter password for WireGuard UI: "
@@ -252,7 +218,7 @@ main() {
   install_docker_compose
 
   if [[ -f .env ]]; then
-    printf "%s\n" "Found existing .env file"
+    warn "Found existing .env file"
     source .env
   fi
 
