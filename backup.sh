@@ -45,7 +45,7 @@ backup_vds() {
     nginx:alpine-slim
 
   local ext_ip
-  ext_ip="$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 api.ipify.org 2>/dev/null)"
+  ext_ip="$(curl -4 ifconfig.me 2>/dev/null)"
 
   if [[ -z "${ext_ip}" ]]; then
     err "Could not determine external IP."
