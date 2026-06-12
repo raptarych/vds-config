@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Backs up the ~/.vds directory to a tar archive and uploads it
-# to tmpfiles.org, printing the download URL to stdout.
+# Backs up the ~/.vds directory to a tar archive and serves it
+# via a temporary nginx docker container.
 
 set -euo pipefail
 
@@ -9,48 +9,64 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 source "${script_dir}/lib.sh"
 
 readonly VDS_DIR="${HOME}/.vds"
-readonly UPLOAD_URL='https://tmpfiles.org/api/v1/upload'
-readonly EXPIRE_SECONDS=7200
+readonly SERV_PORT=9876
+readonly SERV_CONTAINER="vds-backup-server"
+
+cleanup() {
+  rm -rf "${backup_tmpdir:-}"
+}
+trap cleanup EXIT
 
 backup_vds() {
-  local tmpfile
-  tmpfile="$(mktemp /tmp/vds-backup-XXXXXX.tar)"
-
   if [[ ! -d "${VDS_DIR}" ]]; then
     err "Error: ${VDS_DIR} does not exist."
     return 1
   fi
 
-  tar cf "${tmpfile}" -C "${HOME}" .vds
-  info "Backup created: ${tmpfile}"
+  local backup_tmpdir
+  backup_tmpdir="$(mktemp -d /tmp/vds-backup-XXXXXX)"
+  local tarfile="${backup_tmpdir}/vds-backup.tar"
 
-  local response
-  response="$(curl -s -F "file=@${tmpfile}" \
-       -F "expire=${EXPIRE_SECONDS}" \
-       "${UPLOAD_URL}")" || {
-    err "Upload failed."
-    rm -f "${tmpfile}"
-    return 1
-  }
+  tar cf "${tarfile}" -C "${HOME}" .vds
+  info "Backup created: ${tarfile}"
 
-  rm -f "${tmpfile}"
+  docker rm -f "${SERV_CONTAINER}" >/dev/null 2>&1 || true
 
-  local url
-  url="$(printf '%s' "${response}" | jq -r '.data.url')"
+  docker run -d \
+    --name "${SERV_CONTAINER}" \
+    -p "${SERV_PORT}:80" \
+    -v "${backup_tmpdir}:/usr/share/nginx/html:ro" \
+    --read-only \
+    --tmpfs /var/cache/nginx:size=1M \
+    --tmpfs /var/run:size=1M \
+    --tmpfs /var/log/nginx:size=1M \
+    nginx:alpine-slim
 
-  if [[ -z "${url}" || "${url}" == "null" ]]; then
-    err "Failed to parse upload response: ${response}"
+  local ext_ip
+  ext_ip="$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 api.ipify.org 2>/dev/null)"
+
+  if [[ -z "${ext_ip}" ]]; then
+    err "Could not determine external IP."
     return 1
   fi
 
-  printf '%s\n' "${url}"
+  (sleep 3600 && docker rm -f "${SERV_CONTAINER}" >/dev/null 2>&1) &
+  disown
+
+  local download_url="http://${ext_ip}:${SERV_PORT}/vds-backup.tar"
+  printf '\n'
+  info "Backup is being served at:"
+  printf '%s\n' "${download_url}"
+  printf '\n'
+  warn "Container will be removed automatically in 1 hour."
+  printf '\n'
+  info "Use on target server:"
+  printf '  bash restore.sh %s\n' "${download_url}"
 }
 
 main() {
   info "Starting backup of ${VDS_DIR}..."
-  local url
-  url="$(backup_vds)"
-  printf '%s\n' "${url}"
+  backup_vds
 }
 
 main "$@"
