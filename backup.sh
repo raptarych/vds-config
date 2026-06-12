@@ -20,15 +20,17 @@ ensure_dependencies() {
 }
 
 backup_vds() {
-  local tmpfile
-  tmpfile="$(mktemp /tmp/vds-backup-XXXXXX.zip)"
+  local tmpdir
+  tmpdir="$(mktemp -d /tmp/vds-backup-XXXXXX)"
 
   if [[ ! -d "${VDS_DIR}" ]]; then
     err "Error: ${VDS_DIR} does not exist."
     return 1
   fi
 
-  zip -r -q "${tmpfile}" "${VDS_DIR}"
+  tar cf "${tmpdir}/vds.tar" -C "${HOME}" .vds
+  (cd "${tmpdir}" && zip -q "vds-backup.zip" vds.tar)
+  local tmpfile="${tmpdir}/vds-backup.zip"
   info "Backup created: ${tmpfile}"
 
   local response
