@@ -25,7 +25,9 @@ backup_vds() {
 
   local backup_tmpdir
   backup_tmpdir="$(mktemp -d /tmp/vds-backup-XXXXXX)"
-  local tarfile="${backup_tmpdir}/vds-backup.tar"
+  local randname
+  randname="$(head -c 16 /dev/urandom | base64 | tr -dc 'a-z0-9' | head -c 16)"
+  local tarfile="${backup_tmpdir}/vds-backup-${randname}.tar"
 
   tar cf "${tarfile}" -C "${HOME}" .vds
   info "Backup created: ${tarfile}"
@@ -53,7 +55,7 @@ backup_vds() {
   (sleep 3600 && docker rm -f "${SERV_CONTAINER}" >/dev/null 2>&1) &
   disown
 
-  local download_url="http://${ext_ip}:${SERV_PORT}/vds-backup.tar"
+  local download_url="http://${ext_ip}:${SERV_PORT}/vds-backup-${randname}.tar"
   printf '\n'
   info "Backup is being served at:"
   printf '%s\n' "${download_url}"
