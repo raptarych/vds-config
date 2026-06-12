@@ -14,7 +14,7 @@ readonly NC='\033[0m'
 
 # Constants
 readonly FAKE_DOMAIN='gosuslugi.ru'
-readonly PORT='484'
+PORT='484'
 readonly WG_PANEL_PORT='51821'
 readonly CONFIG_DIR='~/.vds'
 
