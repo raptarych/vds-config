@@ -8,7 +8,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 source "${script_dir}/lib.sh"
 
-readonly VDS_DIR="$HOME/.vds"
+readonly VDS_DIR="~/.vds"
 readonly UPLOAD_URL='https://tmpfiles.org/api/v1/upload'
 readonly EXPIRE_SECONDS=7200
 
@@ -28,7 +28,7 @@ backup_vds() {
     return 1
   fi
 
-  zip -r -q "${tmpfile}" "${VDS_DIR}" >/dev/null
+  zip -r -q "${tmpfile}" "${VDS_DIR}"
   info "Backup created: ${tmpfile}"
 
   local response
@@ -58,7 +58,6 @@ main() {
   info "Starting backup of ${VDS_DIR}..."
   local url
   url="$(backup_vds)"
-  info "Backup available at:"
   printf '%s\n' "${url}"
 }
 
