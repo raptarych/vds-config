@@ -10,7 +10,7 @@ services:
       - WG_HOST=${EXTERNAL_IP}
       - PASSWORD=${WG_PANEL_PASSWORD}
     volumes:
-      - ~/.wg-easy:/etc/wireguard
+      - ~/.vds/wg-easy:/etc/wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -26,6 +26,6 @@ services:
     ports:
       - "${PORT:-484}:443"
     volumes:
-      - ~/.proxy-config:/data
+      - ~/.vds/mt-proxy-config:/data
     environment:
       - SECRET=${TG_PROXY_SECRET}

@@ -35,15 +35,20 @@ if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /d
 else
     echo -e "${YELLOW}Docker Compose установлен, пропускаем его установку${NC}"
 fi
-sudo docker compose down
+
+# Останавливаем старые контейнеры
+sudo docker compose --env-file .env down --remove-orphans
+mkdir -p ~/.vds
+mkdir -p ~/.vds/proxy-config
+mkdir -p ~/.vds/wg-easy
 
 # Telegram Proxy
 echo -e "${YELLOW}Подготовка MT Proxy${NC}"
 PORT="484"
 FAKE_DOMAIN="gosuslugi.ru"
 
-if [ -f ~/mtproto_config.txt ]; then
-	source ~/mtproto_config.txt
+if [ -f ~/.vds/mtproto_config.txt ]; then
+	source ~/.vds/mtproto_config.txt
 fi
 
 echo "🚀 Запуск MTProto прокси с Fake TLS"
@@ -77,9 +82,6 @@ PORT="${PORT}"
 TG_PROXY_SECRET="${TG_PROXY_SECRET}"
 EOF
 
-# Останавливаем старые контейнеры до проверки порта
-sudo docker compose --env-file .env down --remove-orphans
-
 # Проверяем, свободен ли порт
 echo -n "🔍 Проверка порта ${PORT}... "
 if ss -tuln | grep -q ":${PORT} "; then
@@ -110,14 +112,14 @@ if sudo docker compose ps --format json | grep -q "wg-easy" && sudo docker compo
 	echo -e "${GREEN}${LINK}${NC}"
 	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-	cat > ~/mtproto_config.txt << EOF
+	cat > ~/.vds/mtproto_config.txt << EOF
 EXTERNAL_IP="${EXTERNAL_IP}"
 PORT="${PORT}"
 TG_PROXY_SECRET="${TG_PROXY_SECRET}"
 FAKE_DOMAIN="${FAKE_DOMAIN}"
 LINK="${LINK}"
 EOF
-	echo "✅ Конфигурация сохранена в ~/mtproto_config.txt"
+	echo "✅ Конфигурация сохранена в ~/.vds/mtproto_config.txt"
 
 	echo ""
 	echo "📋 Логи контейнеров:"
