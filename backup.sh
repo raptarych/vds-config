@@ -8,7 +8,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 source "${script_dir}/lib.sh"
 
-readonly VDS_DIR="~/.vds"
+readonly VDS_DIR="${HOME}/.vds"
 readonly UPLOAD_URL='https://tmpfiles.org/api/v1/upload'
 readonly EXPIRE_SECONDS=7200
 
