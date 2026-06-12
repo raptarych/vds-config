@@ -47,8 +47,9 @@ echo -e "${YELLOW}Подготовка MT Proxy${NC}"
 PORT="484"
 FAKE_DOMAIN="gosuslugi.ru"
 
-if [ -f ~/.vds/mtproto_config.txt ]; then
-	source ~/.vds/mtproto_config.txt
+if [ -f .env ]; then
+	echo "$🛠️ Найден файл .env"
+	source .env
 fi
 
 echo "🚀 Запуск MTProto прокси с Fake TLS"
