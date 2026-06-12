@@ -11,7 +11,6 @@ source "${SCRIPT_DIR}/lib.sh"
 # Constants
 readonly FAKE_DOMAIN='gosuslugi.ru'
 PORT='484'
-readonly WG_PANEL_PORT='51821'
 readonly CONFIG_DIR='~/.vds'
 
 
@@ -77,7 +76,7 @@ install_docker_compose() {
 create_directories() {
   mkdir -p "${CONFIG_DIR}"
   mkdir -p "${CONFIG_DIR}/proxy-config"
-  mkdir -p "${CONFIG_DIR}/wg-easy"
+  mkdir -p "${CONFIG_DIR}/wg-easy-15"
 }
 
 
@@ -130,17 +129,14 @@ check_port() {
 # Write .env file with current configuration.
 # Arguments:
 #   external_ip
-#   wg_panel_password
 #   tg_proxy_secret
 #######################################
 write_env() {
   local external_ip="$1"
-  local wg_panel_password="$2"
-  local tg_proxy_secret="$3"
+  local tg_proxy_secret="$2"
 
   cat > .env <<EOF
 EXTERNAL_IP="${external_ip}"
-WG_PANEL_PASSWORD="${wg_panel_password}"
 PORT="${PORT}"
 TG_PROXY_SECRET="${tg_proxy_secret}"
 EOF
@@ -199,7 +195,7 @@ print_summary() {
   info "${link_http}"
   printf "%s\n" ""
   printf "%s\n" "WireGuard panel:"
-  info "http://${external_ip}:${WG_PANEL_PORT}/"
+  info "http://${external_ip}:51821/"
   printf "%s\n" "========================"
 }
 
@@ -208,11 +204,6 @@ main() {
   local external_ip
   external_ip="$(get_external_ip)"
   print_info "Detected external IP of VPS" "${external_ip}"
-
-  local wg_panel_password
-  printf "Enter password for WireGuard UI: "
-  read -rs wg_panel_password
-  printf "\n"
 
   install_docker
   install_docker_compose
@@ -233,7 +224,7 @@ main() {
     tg_proxy_secret="${TG_PROXY_SECRET}"
   fi
 
-  write_env "${external_ip}" "${wg_panel_password}" "${tg_proxy_secret}"
+  write_env "${external_ip}" "${tg_proxy_secret}"
   create_directories
   stop_old_containers
   check_port "${PORT}"

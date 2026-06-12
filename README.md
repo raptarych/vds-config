@@ -6,7 +6,7 @@
 
 | Сервис | Образ | Порт | Описание |
 |---|---|---|---|
-| **WireGuard** | `weejewel/wg-easy` | `51820/UDP`, `51821/TCP` | VPN с веб-панелью |
+| **WireGuard** | `ghcr.io/wg-easy/wg-easy` | `51820/UDP`, `51821/TCP` | VPN с веб-панелью |
 | **MTProto Proxy** | `telegrammessenger/proxy` | `484/TCP` | Telegram-прокси с Fake TLS |
 
 ## Установка
