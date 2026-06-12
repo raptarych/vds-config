@@ -21,7 +21,7 @@ restore_vds() {
   tmpfile="$(mktemp /tmp/vds-restore-XXXXXX.tar)"
 
   info "Downloading archive..."
-  curl -sSf -o "${tmpfile}" "${url}" || {
+  curl -sSf --connect-timeout 10 --max-time 300 -o "${tmpfile}" "${url}" || {
     err "Download failed."
     rm -f "${tmpfile}"
     return 1
