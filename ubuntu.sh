@@ -267,10 +267,10 @@ main() {
     tg_proxy_secret="${TG_PROXY_SECRET}"
   fi
 
-  check_port "${PORT}"
   write_env "${external_ip}" "${wg_panel_password}" "${tg_proxy_secret}"
   create_directories
   stop_old_containers
+  check_port "${PORT}"
   start_containers
   print_summary "${external_ip}" "${tg_proxy_secret}"
 }
