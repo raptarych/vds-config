@@ -44,11 +44,11 @@ bash ubuntu.sh
 bash backup.sh
 ```
 
-Скрипт создаст zip-архив и загрузит его на временное хранилище. На выходе вы получите ссылку на файл ( TTL — 2 часа).
+Скрипт создаст tar-архив и загрузит его на временное хранилище. На выходе вы получите ссылку на файл (TTL — 2 часа).
 
 Для восстановления из архива:
 
 ```bash
-curl -o backup.zip "<ссылка_от_backup.sh>"
-bash restore.sh backup.zip
+curl -o backup.tar "<ссылка_от_backup.sh>"
+bash restore.sh backup.tar
 ```
