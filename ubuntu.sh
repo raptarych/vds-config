@@ -1,126 +1,278 @@
 #!/bin/bash
+#
+# Ubuntu 24.04 VPS configuration script.
+# Sets up Docker, WireGuard, and Telegram MTProto proxy.
 
-# Конфигурация для Ubuntu 24.04
+set -euo pipefail
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Colors
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m'
 
-EXTERNAL_IP=$(curl -4 ifconfig.me)
-if [[ -z "$EXTERNAL_IP" ]]; then
-	echo -e "${RED}Пустой EXTERNAL_IP${NC}"
-	exit 1
-fi
+# Constants
+readonly FAKE_DOMAIN='gosuslugi.ru'
+readonly PORT='484'
+readonly WG_PANEL_PORT='51821'
+readonly CONFIG_DIR='~/.vds'
 
-echo -e "Detected external IP of VPS:${GREEN} $EXTERNAL_IP ${NC}"
-read -s -p "Enter password for WireGuard UI: " WG_PANEL_PASSWORD
-echo ""
 
-# Docker
-if ! command -v docker &> /dev/null; then
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sudo sh get-docker.sh
-else
-    echo -e "${YELLOW}Docker установлен, пропускаем его установку${NC}"
-fi
+#######################################
+# Print error message to stderr and exit.
+# Arguments:
+#   Error message string.
+#######################################
+err() {
+  printf "%s\n" "$*" >&2
+}
 
-# Docker Compose
-if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /dev/null; then
-	echo -e "${YELLOW}Устанавливаем Docker Compose${NC}"
-	DIRECTORY=$(dirname $(realpath $(which docker)))
-	curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o "$DIRECTORY/docker-compose"
-	chmod +x "$DIRECTORY/docker-compose"
-else
-    echo -e "${YELLOW}Docker Compose установлен, пропускаем его установку${NC}"
-fi
 
-# Останавливаем старые контейнеры
-sudo docker compose --env-file .env down --remove-orphans
-mkdir -p ~/.vds
-mkdir -p ~/.vds/proxy-config
-mkdir -p ~/.vds/wg-easy
+#######################################
+# Print info message to stdout.
+# Arguments:
+#   Message string.
+#######################################
+info() {
+  printf "${GREEN}%s${NC}\n" "$*"
+}
 
-# Telegram Proxy
-echo -e "${YELLOW}Подготовка MT Proxy${NC}"
-PORT="484"
-FAKE_DOMAIN="gosuslugi.ru"
 
-if [ -f .env ]; then
-	echo "$🛠️ Найден файл .env"
-	source .env
-fi
+#######################################
+# Print warning message to stdout.
+# Arguments:
+#   Message string.
+#######################################
+warn() {
+  printf "${YELLOW}%s${NC}\n" "$*"
+}
 
-echo "🚀 Запуск MTProto прокси с Fake TLS"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "📌 Используем домен: ${BLUE}${FAKE_DOMAIN}${NC}"
 
-if [[ -z "$TG_PROXY_SECRET" ]]; then
+#######################################
+# Detect external IPv4 address.
+# Outputs:
+#   External IP address or exits on failure.
+#######################################
+get_external_ip() {
+  local ip
+  ip="$(curl -4 -s ifconfig.me)" || {
+    err "Failed to detect external IP"
+    exit 1
+  }
 
-	echo -n "🔑 Генерация Fake TLS секрета... "
+  if [[ -z "${ip}" ]]; then
+    err "Empty EXTERNAL_IP response"
+    exit 1
+  fi
 
-	DOMAIN_HEX=$(echo -n $FAKE_DOMAIN | xxd -ps | tr -d '\n')
-	echo -e "\n   Hex домена: ${DOMAIN_HEX}"
+  printf "%s" "${ip}"
+}
 
-	DOMAIN_LEN=${#DOMAIN_HEX}
-	NEEDED=$((30 - DOMAIN_LEN))
-	RANDOM_HEX=$(openssl rand -hex 15 | cut -c1-$NEEDED)
 
-	TG_PROXY_SECRET="ee${DOMAIN_HEX}${RANDOM_HEX}"
+#######################################
+# Install Docker if not present.
+#######################################
+install_docker() {
+  if command -v docker &>/dev/null; then
+    warn "Docker already installed, skipping"
+    return
+  fi
 
-	echo -e "   Случайное дополнение: ${RANDOM_HEX}"
-	echo -e "   Секрет: ${YELLOW}${TG_PROXY_SECRET}${NC}"
-	echo "   Длина: ${#TG_PROXY_SECRET} символов"
-fi
-LINK="tg://proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=${TG_PROXY_SECRET}"
-LINK_HTTP="https://t.me/proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=${TG_PROXY_SECRET}"
+  local docker_script
+  docker_script="$(mktemp)"
+  curl -fsSL https://get.docker.com -o "${docker_script}"
+  sudo sh "${docker_script}"
+  rm -f "${docker_script}"
+}
 
-# Создаём .env
-cat > .env << EOF
-EXTERNAL_IP="${EXTERNAL_IP}"
-WG_PANEL_PASSWORD="${WG_PANEL_PASSWORD}"
+
+#######################################
+# Install Docker Compose standalone if not present.
+#######################################
+install_docker_compose() {
+  if command -v docker-compose &>/dev/null || docker compose version &>/dev/null; then
+    warn "Docker Compose already installed, skipping"
+    return
+  fi
+
+  warn "Installing Docker Compose"
+  local bin_dir
+  bin_dir="$(dirname "$(command -v docker)")"
+  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+    -o "${bin_dir}/docker-compose"
+  chmod +x "${bin_dir}/docker-compose"
+}
+
+
+#######################################
+# Create required directories.
+#######################################
+create_directories() {
+  mkdir -p "${CONFIG_DIR}"
+  mkdir -p "${CONFIG_DIR}/proxy-config"
+  mkdir -p "${CONFIG_DIR}/wg-easy"
+}
+
+
+#######################################
+# Generate Telegram proxy secret with Fake TLS.
+# Globals:
+#   FAKE_DOMAIN
+# Outputs:
+#   Generated secret string.
+#######################################
+generate_proxy_secret() {
+  local domain_hex domain_len needed random_hex
+
+  printf "Generating Fake TLS secret... "
+
+  domain_hex="$(printf "%s" "${FAKE_DOMAIN}" | xxd -ps | tr -d '\n')"
+  printf "\n  Domain hex: %s\n" "${domain_hex}"
+
+  domain_len="${#domain_hex}"
+  needed=$((30 - domain_len))
+  random_hex="$(openssl rand -hex 15 | cut -c1-"${needed}")"
+
+  local secret="ee${domain_hex}${random_hex}"
+
+  printf "  Random part: %s\n" "${random_hex}"
+  printf "  Secret: ${YELLOW}%s${NC}\n" "${secret}"
+  printf "  Length: %s chars\n" "${#secret}"
+  printf "%s" "${secret}"
+}
+
+
+#######################################
+# Check if port is free.
+# Arguments:
+#   Port number to check.
+#######################################
+check_port() {
+  local port="$1"
+
+  printf "Checking port %s... " "${port}"
+  if ss -tuln | grep -q ":${port} "; then
+    err "Port ${port} is already in use"
+    exit 1
+  fi
+  info "OK"
+}
+
+
+#######################################
+# Write .env file with current configuration.
+# Arguments:
+#   external_ip
+#   wg_panel_password
+#   tg_proxy_secret
+#######################################
+write_env() {
+  local external_ip="$1"
+  local wg_panel_password="$2"
+  local tg_proxy_secret="$3"
+
+  cat > .env <<EOF
+EXTERNAL_IP="${external_ip}"
+WG_PANEL_PASSWORD="${wg_panel_password}"
 PORT="${PORT}"
-TG_PROXY_SECRET="${TG_PROXY_SECRET}"
+TG_PROXY_SECRET="${tg_proxy_secret}"
 EOF
-
-# Проверяем, свободен ли порт
-echo -n "🔍 Проверка порта ${PORT}... "
-if ss -tuln | grep -q ":${PORT} "; then
-	echo -e "${RED}Порт занят: ${NC}"
-	exit 1
-else
-	echo -e "${GREEN}✅ УСПЕШНО${NC}"
-fi
-
-# Запускаем docker compose
-echo -n "📦 Запуск docker compose... "
-sudo docker compose --env-file .env up -d
-
-sleep 3
-
-if sudo docker compose ps --format json | grep -q "wg-easy" && sudo docker compose ps --format json | grep -q "mtproto-proxy"; then
-
-	echo -e "${GREEN}✅ УСПЕШНО${NC}"
-	echo "✅ Конфигурация сохранена в .env"
-	echo ""
-	echo "📋 Логи контейнеров:"
-	sudo docker compose logs --tail 5
-
-else
-	echo -e "${RED}❌ ОШИБКА${NC}"
-	sudo docker compose logs --tail 5
-	exit 1
-fi
+}
 
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ Скрипт завершил свою работу!"
-echo ""
-echo "🔗 Ссылка для Telegram (IPv4):"
-echo -e "${GREEN}${LINK}${NC}"
-echo -e "${GREEN}${LINK_HTTP}${NC}"
-echo ""
-echo "🔗 Адрес панели wg-easy:"
-echo -e "${GREEN}http://${EXTERNAL_IP}:51821/${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+#######################################
+# Stop old containers.
+#######################################
+stop_old_containers() {
+  sudo docker compose --env-file .env down --remove-orphans || true
+}
+
+
+#######################################
+# Start containers and verify they are running.
+#######################################
+start_containers() {
+  printf "Starting docker compose... "
+  sudo docker compose --env-file .env up -d
+
+  sleep 3
+
+  if sudo docker compose ps --format json | grep -q "wg-easy" \
+    && sudo docker compose ps --format json | grep -q "mtproto-proxy"; then
+    info "OK"
+    printf "%s\n" "Configuration saved to .env"
+    printf "%s\n" ""
+    printf "%s\n" "Container logs:"
+    sudo docker compose logs --tail 5
+  else
+    err "Container startup failed"
+    sudo docker compose logs --tail 5
+    exit 1
+  fi
+}
+
+
+#######################################
+# Print summary with connection links.
+# Arguments:
+#   external_ip
+#   tg_proxy_secret
+#######################################
+print_summary() {
+  local external_ip="$1"
+  local tg_proxy_secret="$2"
+  local link="tg://proxy?server=${external_ip}&port=${PORT}&secret=${tg_proxy_secret}"
+  local link_http="https://t.me/proxy?server=${external_ip}&port=${PORT}&secret=${tg_proxy_secret}"
+
+  printf "%s\n" "========================"
+  info "Script completed successfully!"
+  printf "%s\n" ""
+  printf "%s\n" "Telegram proxy link (IPv4):"
+  info "${link}"
+  info "${link_http}"
+  printf "%s\n" ""
+  printf "%s\n" "WireGuard panel:"
+  info "http://${external_ip}:${WG_PANEL_PORT}/"
+  printf "%s\n" "========================"
+}
+
+
+main() {
+  local external_ip
+  external_ip="$(get_external_ip)"
+  printf "Detected external IP of VPS: ${GREEN}%s${NC}\n" "${external_ip}"
+
+  local wg_panel_password
+  printf "Enter password for WireGuard UI: "
+  read -rs wg_panel_password
+  printf "\n"
+
+  install_docker
+  install_docker_compose
+
+  if [[ -f .env ]]; then
+    printf "%s\n" "Found existing .env file"
+    source .env
+  fi
+
+  printf "%s\n" "Setting up MTProto proxy with Fake TLS"
+  printf "%s\n" "--------------------------------------"
+  printf "Using domain: ${BLUE}%s${NC}\n" "${FAKE_DOMAIN}"
+
+  local tg_proxy_secret
+  if [[ -z "${TG_PROXY_SECRET:-}" ]]; then
+    tg_proxy_secret="$(generate_proxy_secret)"
+  else
+    tg_proxy_secret="${TG_PROXY_SECRET}"
+  fi
+
+  check_port "${PORT}"
+  write_env "${external_ip}" "${wg_panel_password}" "${tg_proxy_secret}"
+  create_directories
+  stop_old_containers
+  start_containers
+  print_summary "${external_ip}" "${tg_proxy_secret}"
+}
+
+main "$@"
