@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Backs up the ~/.vds directory to a tar archive and serves it
-# via a temporary nginx docker container.
+# via a temporary python3 http server docker container.
 
 set -euo pipefail
 
@@ -37,16 +37,13 @@ backup_vds() {
 
   docker run -d \
     --name "${SERV_CONTAINER}" \
-    -p "${SERV_PORT}:80" \
-    -v "${backup_tmpdir}:/usr/share/nginx/html:ro" \
-    --read-only \
-    --tmpfs /var/cache/nginx:size=1M \
-    --tmpfs /var/run:size=1M \
-    --tmpfs /var/log/nginx:size=1M \
-    nginx:alpine-slim
+    -p "${SERV_PORT}:8000" \
+    -v "${backup_tmpdir}:/data:ro" \
+    python:3-alpine \
+    python -m http.server 8000 --directory /data
 
   local ext_ip
-  ext_ip="$(curl -4 ifconfig.me 2>/dev/null)"
+  ext_ip="$(curl -4 --max-time 5 ifconfig.me 2>/dev/null || curl -4 --max-time 5 api.ipify.org 2>/dev/null)"
 
   if [[ -z "${ext_ip}" ]]; then
     err "Could not determine external IP."
