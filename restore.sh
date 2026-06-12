@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Restores the ~/.vds directory from a tar archive file
-# located in the script's working directory.
+# Restores the ~/.vds directory by downloading a tar archive
+# from the given URL and extracting it.
 
 set -euo pipefail
 
@@ -11,15 +11,25 @@ source "${script_dir}/lib.sh"
 readonly VDS_DIR="${HOME}/.vds"
 
 usage() {
-  err "Usage: $0 <backup.tar>"
+  err "Usage: $0 <url>"
   exit 1
 }
 
 restore_vds() {
-  local archive="$1"
+  local url="$1"
+  local tmpfile
+  tmpfile="$(mktemp /tmp/vds-restore-XXXXXX.tar)"
 
-  if [[ ! -f "${archive}" ]]; then
-    err "Error: archive not found: ${archive}"
+  info "Downloading archive..."
+  curl -sSf -o "${tmpfile}" "${url}" || {
+    err "Download failed."
+    rm -f "${tmpfile}"
+    return 1
+  }
+
+  if [[ ! -s "${tmpfile}" ]]; then
+    err "Downloaded file is empty."
+    rm -f "${tmpfile}"
     return 1
   fi
 
@@ -28,7 +38,8 @@ restore_vds() {
     rm -rf "${VDS_DIR}"
   fi
 
-  tar xf "${archive}" -C "${HOME}"
+  tar xf "${tmpfile}" -C "${HOME}"
+  rm -f "${tmpfile}"
 
   info "Restore complete: ${VDS_DIR}"
 }
@@ -38,9 +49,9 @@ main() {
     usage
   fi
 
-  local archive="$1"
-  info "Starting restore from ${archive}..."
-  restore_vds "${archive}"
+  local url="$1"
+  info "Starting restore from ${url}..."
+  restore_vds "${url}"
 }
 
 main "$@"
