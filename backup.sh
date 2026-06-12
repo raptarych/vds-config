@@ -12,6 +12,13 @@ readonly VDS_DIR="$HOME/.vds"
 readonly UPLOAD_URL='https://tmpfiles.org/api/v1/upload'
 readonly EXPIRE_SECONDS=7200
 
+ensure_dependencies() {
+  if ! command -v zip >/dev/null 2>&1; then
+    warn "zip not found, installing..."
+    sudo apt-get update -qq && sudo apt-get install -y -qq zip
+  fi
+}
+
 backup_vds() {
   local tmpfile
   tmpfile="$(mktemp /tmp/vds-backup-XXXXXX.zip)"
@@ -47,6 +54,7 @@ backup_vds() {
 }
 
 main() {
+  ensure_dependencies
   info "Starting backup of ${VDS_DIR}..."
   local url
   url="$(backup_vds)"
