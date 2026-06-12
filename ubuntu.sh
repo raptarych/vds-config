@@ -224,7 +224,7 @@ main() {
 
   printf "%s\n" "Setting up MTProto proxy with Fake TLS"
   printf "%s\n" "--------------------------------------"
-  printf "Using domain: ${BLUE}%s${NC}\n" "${FAKE_DOMAIN}"
+  printf "Using domain for FakeTLS: ${BLUE}%s${NC}\n" "${FAKE_DOMAIN}"
 
   local tg_proxy_secret
   if [[ -z "${TG_PROXY_SECRET:-}" ]]; then
