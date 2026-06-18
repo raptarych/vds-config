@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/lib.sh"
 
 # Constants
 readonly FAKE_DOMAIN='gosuslugi.ru'
-PORT='484'
+PORT='443'
 readonly CONFIG_DIR='/home/.vds'
 
 
