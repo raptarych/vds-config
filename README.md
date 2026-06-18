@@ -7,7 +7,7 @@
 | Сервис | Образ | Порт | Описание |
 |---|---|---|---|
 | **WireGuard** | `ghcr.io/wg-easy/wg-easy` | `51820/UDP`, `51821/TCP` | VPN с веб-панелью |
-| **MTProto Proxy** | `telegrammessenger/proxy` | `484/TCP` | Telegram-прокси с Fake TLS |
+| **MTProto Proxy** | `telegrammessenger/proxy` | `443/TCP` | Telegram-прокси с Fake TLS |
 
 ## Установка
 
@@ -19,11 +19,10 @@ bash ubuntu.sh
 
 Скрипт:
 1. Определяет внешний IP сервера
-2. Спрашивает пароль для панели WireGuard
-3. Ставит Docker и Docker Compose (если нет)
-4. Генерирует секрет для MTProto Proxy с Fake TLS
-5. Поднимает контейнеры
-6. Выдаёт ссылки для подключения
+2. Ставит Docker и Docker Compose (если нет)
+3. Генерирует секрет для MTProto Proxy с Fake TLS
+4. Поднимает контейнеры
+5. Выдаёт ссылки для подключения
 
 ## Результат
 
@@ -34,19 +33,4 @@ bash ubuntu.sh
 
 ## Данные
 
-Все конфиги хранятся в `~/.vds/`:
-
-## Бэкап и восстановление
-
-`backup.sh` создаёт tar-архив и раздает его через временный nginx-контейнер на порту 9876:
-
-```bash
-bash backup.sh
-# Выведет ссылку
-```
-
-Для восстановления на целевом сервере:
-
-```bash
-bash restore.sh "http://<...>.tar"
-```
+Все конфиги хранятся в `/home/.vds/`:
