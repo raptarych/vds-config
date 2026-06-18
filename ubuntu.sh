@@ -45,7 +45,7 @@ register_docker_repository() {
 
   # Add Docker's official GPG key:
   sudo apt update
-  sudo apt install ca-certificates curl
+  sudo apt install ca-certificates curl -y
   sudo install -m 0755 -d /etc/apt/keyrings
   sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -91,7 +91,7 @@ install_docker_compose() {
 
   warn "Installing Docker Compose"
   register_docker_repository
-  sudo apt install docker-compose-plugin
+  sudo apt install docker-compose-plugin -y
 }
 
 
