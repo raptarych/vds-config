@@ -41,7 +41,7 @@ services:
     ports:
       - "${PORT:-484}:443"
     volumes:
-      - ~/.vds/mt-proxy-config:/data
+      - /home/.vds/mt-proxy-config:/data
     environment:
       - SECRET=${TG_PROXY_SECRET}
 

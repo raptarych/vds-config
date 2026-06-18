@@ -11,7 +11,7 @@ source "${SCRIPT_DIR}/lib.sh"
 # Constants
 readonly FAKE_DOMAIN='gosuslugi.ru'
 PORT='484'
-readonly CONFIG_DIR='~/.vds'
+readonly CONFIG_DIR='/home/.vds'
 
 
 #######################################
@@ -36,6 +36,34 @@ get_external_ip() {
 
 
 #######################################
+# Register Docker repository
+#######################################
+register_docker_repository() {
+  if cat /etc/apt/sources.list.d/docker.sources &>/dev/null;  then
+    return
+  fi
+
+  # Add Docker's official GPG key:
+  sudo apt update
+  sudo apt install ca-certificates curl
+  sudo install -m 0755 -d /etc/apt/keyrings
+  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+  # Add the repository to Apt sources:
+  sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+  sudo apt update
+}
+
+
+#######################################
 # Install Docker if not present.
 #######################################
 install_docker() {
@@ -56,17 +84,14 @@ install_docker() {
 # Install Docker Compose standalone if not present.
 #######################################
 install_docker_compose() {
-  if command -v docker-compose &>/dev/null || docker compose version &>/dev/null; then
+  if docker compose version &>/dev/null; then
     warn "Docker Compose already installed, skipping"
     return
   fi
 
   warn "Installing Docker Compose"
-  local bin_dir
-  bin_dir="$(dirname "$(command -v docker)")"
-  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-    -o "${bin_dir}/docker-compose"
-  chmod +x "${bin_dir}/docker-compose"
+  register_docker_repository
+  sudo apt install docker-compose-plugin
 }
 
 
@@ -90,10 +115,10 @@ create_directories() {
 generate_proxy_secret() {
   local domain_hex domain_len needed random_hex
 
-  printf "Generating Fake TLS secret... "
+  printf "Generating Fake TLS secret... " >&2
 
   domain_hex="$(printf "%s" "${FAKE_DOMAIN}" | xxd -ps | tr -d '\n')"
-  printf "\n  Domain hex: %s\n" "${domain_hex}"
+  printf "\n  Domain hex: %s\n" "${domain_hex}" >&2
 
   domain_len="${#domain_hex}"
   needed=$((30 - domain_len))
@@ -101,9 +126,9 @@ generate_proxy_secret() {
 
   local secret="ee${domain_hex}${random_hex}"
 
-  printf "  Random part: %s\n" "${random_hex}"
-  printf "  Secret: ${YELLOW}%s${NC}\n" "${secret}"
-  printf "  Length: %s chars\n" "${#secret}"
+  printf "  Random part: %s\n" "${random_hex}" >&2
+  printf "  Secret: ${YELLOW}%s${NC}\n" "${secret}" >&2
+  printf "  Length: %s chars\n" "${#secret}" >&2
   printf "%s" "${secret}"
 }
 
